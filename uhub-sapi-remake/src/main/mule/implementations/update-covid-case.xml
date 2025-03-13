@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:xml-module="http://www.mulesoft.org/schema/mule/xml-module" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/xml-module http://www.mulesoft.org/schema/mule/xml-module/current/mule-xml-module.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<flow name="put:\cases:application\xml:uhub-sapi-raml-config">
+		<ee:transform doc:name="Set correlationId And transactionId" doc:id="725f1cd0-a56a-42d4-bcad-d2d650491d4e" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="correlationId" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.headers.'x-correlation-id' default payload.covidCase.caseID]]></ee:set-variable>
+				<ee:set-variable variableName="inputPayload" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.covidCase]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Start Log" doc:id="6393b1ce-ca6f-4168-b572-459f0783caa1" message='transactionID: #[vars.transactionId], correlationID: #[vars.correlationId], message: "Started update covid case flow", payload: #[payload]' />
+		<ee:transform doc:name="Prepare Covid Case Payload" doc:id="31aaff4e-cb53-40ae-ac3f-e07d9b58dc7a" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="covidCasePayload" ><![CDATA[%dw 2.0
+output application/java
+var actionDate = now() as String {
+	format: "yyyy-MM-dd"
+}
+var owner = "UHIS"
+---
+{
+	national_id: payload.covidCase.nationalID,
+	street_address: payload.covidCase.address.streetAddress,
+	country: payload.covidCase.address.country,
+	city: payload.covidCase.address.city,
+	date_of_birth: payload.covidCase.dateOfBirth as String {
+		format: "yyyy-MM-dd"
+	},
+	case_type: payload.covidCase.caseType,
+	last_name: payload.covidCase.lastName,
+	source: payload.covidCase.source,
+	national_id_type: payload.covidCase.nationalIDType,
+	update_date: actionDate,
+	create_by: owner,
+	phone: payload.covidCase.phone,
+	case_id: payload.covidCase.caseID,
+	state: upper(payload.covidCase.address.state),
+	postal: payload.covidCase.address.postal,
+	update_by: owner,
+	first_name: payload.covidCase.firstName,
+	email: payload.covidCase.email
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<db:update doc:name="Update Covid Case Master" doc:id="83bcecf5-545a-4588-acd6-35ca9f140623" config-ref="Uhub_Database_Config" >
+			<db:sql ><![CDATA[update cvd_case_master set source=:source, case_type=:case_type, first_name=:first_name, last_name=:last_name, phone=:phone, email=:email, date_of_birth=To_date(:date_of_birth, 'YYYY-MM-DD'), national_id=:national_id, national_id_type=:national_id_type, street_address=:street_address, city=:city, state=:state, postal=:postal, country=:country, update_date=To_date(:update_date, 'YYYY-MM-DD'), create_by=:create_by, update_by=:update_by
+where case_id=:case_id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[vars.covidCasePayload]]]></db:input-parameters>
+		</db:update>
+		<ee:transform doc:name="Set Success Response" doc:id="f3401346-7ad2-4b2e-b012-63046b010683" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if (payload.affectedRows > 0) {
+	caseID: vars.covidCasePayload.case_id
+} else{}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="End Log" doc:id="6026b352-90e5-458f-a154-df8d02fc81bb" message='transactionID: #[vars.transactionId], correlationID: #[vars.correlationId], message: "Completed update covid case flow", payload: #[payload]' />
+    
+</flow>
+	</mule>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<sub-flow name="insert-covid-case-sub-flow" doc:id="b0596423-831e-42a7-a20c-48f36f7473ca" >
+		<logger level="DEBUG" doc:name="Start Log" doc:id="3152e1e8-f928-4f70-84fc-60866ec7b39d" message='#["Before insert covid case database call"]'/>
+		<db:stored-procedure doc:name="Insert Covid Case Stored Procedure" doc:id="14903dc3-069d-44ef-b0eb-86e6cb262a99" config-ref="Uhub_Database_Config">
+			<db:sql><![CDATA[{call insert_covid_master (:source, :case_type, :first_name, :last_name, :phone, :email, :date_of_birth, :national_id, :national_id_type, :street_address, :city, :state, :postal, :country, :create_date, :update_date, :create_by, :update_by, :case_id)}]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+	national_id: payload.nationalID,
+	street_address: payload.address.streetAddress,
+	country: payload.address.country,
+	city: payload.address.city,
+	date_of_birth: payload.dateOfBirth,
+	case_type: payload.caseType,
+	last_name: payload.lastName,
+	source: payload.source,
+	national_id_type: payload.nationalIDType,
+	update_date: now() as String {format: "yyyy-MM-dd"},
+	create_by: "UHIS",
+	phone: payload.phone,
+	state: payload.address.state,
+	postal: payload.address.postal,
+	create_date: now() as String {format: "yyyy-MM-dd"},
+	update_by: "UHIS",
+	first_name: payload.firstName,
+	email: payload.email
+}]]]></db:input-parameters>
+			<db:output-parameters>
+				<db:output-parameter key="case_id" type="INTEGER" />
+			</db:output-parameters>
+		</db:stored-procedure>
+		<logger level="DEBUG" doc:name="End Log" doc:id="c521335f-1898-400f-940d-b5bc7af53960" message='#["Completed insert covid case database call"]'/>
+	</sub-flow>
+</mule>

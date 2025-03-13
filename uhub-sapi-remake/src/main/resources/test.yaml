@@ -1,0 +1,10 @@
+http:
+  port: "8081"
+
+db:
+  uhub:
+    host: "oracle-189986-0.cloudclusters.net"
+    port: "10031"
+    username: "uhubdevuser" #"uhubtestuser" I used the same with dev because I don't want create 2 database
+    password: "![6KjiFwa6Ab/Fb3p8f7qePQ==]" #"![Tfa9dY+woE9YcSgL7GhGoA==]"
+    service: "XE"
